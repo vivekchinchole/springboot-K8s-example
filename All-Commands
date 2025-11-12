@@ -1,0 +1,276 @@
+ Vivek!
+
+
+# 🚀 Spring Boot Deployment on Minikube using Docker & Kubernetes
+
+## 🧰 Prerequisites
+
+* Docker Desktop installed and running
+* Minikube installed and configured
+* Java + Maven installed
+* Spring Boot application (JAR file built in `target/`)
+
+---
+
+## 🪄 Step 1: Start Minikube
+
+```bash
+minikube start
+```
+
+**Description:**
+Starts a local Kubernetes cluster using Minikube.
+By default, it uses Docker as the container runtime.
+
+---
+
+## 🔍 Step 2: Check Minikube Status
+
+```bash
+minikube status
+```
+
+**Description:**
+Verifies if the Minikube cluster and its components (kubelet, apiserver) are running.
+
+---
+
+## 🐳 Step 3: Configure Docker to Use Minikube’s Docker Daemon
+
+Windows CMD:
+
+```bash
+@FOR /f "tokens=*" %i IN ('minikube docker-env') DO @call %i
+```
+
+**Description:**
+This command configures your local Docker CLI to use Minikube’s internal Docker engine.
+So, any image you build will be directly available inside Minikube.
+
+> ⚠️ Note: `eval $(minikube docker-env)` is for Linux/Mac — not for Windows CMD.
+
+---
+
+## 🧩 Step 4: Verify Docker Connection
+
+```bash
+docker info
+```
+
+**Description:**
+Confirms that Docker CLI is now pointing to Minikube’s internal Docker engine (check `Name: minikube`).
+
+---
+
+## 📦 Step 5: Build Docker Image for Spring Boot Application
+
+```bash
+docker build -t springboot-k8s-demo:1.0 .
+```
+
+**Description:**
+Builds a Docker image using your `Dockerfile` in the current directory.
+`springboot-k8s-demo:1.0` is the image name and tag.
+
+**Example Dockerfile:**
+
+```Dockerfile
+FROM eclipse-temurin:17-jdk
+EXPOSE 8080
+ADD target/springboot-K8s-example-0.0.1-SNAPSHOT.jar springboot-k8s-demo.jar
+ENTRYPOINT ["java", "-jar", "springboot-k8s-demo.jar"]
+```
+
+---
+
+## 🖼️ Step 6: Verify the Image is Created
+
+```bash
+docker images
+```
+
+**Description:**
+Lists all available Docker images.
+You should see `springboot-k8s-demo:1.0` in the list.
+
+---
+
+## 📁 Step 7: Deploy Application to Kubernetes
+
+**deployment.yaml**
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spring-boot-k8s
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: springboot-k8s
+  template:
+    metadata:
+      labels:
+        app: springboot-k8s
+    spec:
+      containers:
+      - name: springboot-k8s
+        image: springboot-k8s-demo:1.0
+        ports:
+        - containerPort: 8080
+```
+
+Apply the deployment:
+
+```bash
+kubectl apply -f deployment.yaml
+```
+
+**Description:**
+Creates a Kubernetes Deployment with 2 replicas of your Spring Boot container.
+
+---
+
+## 🧠 Step 8: Check Deployment & Pods
+
+```bash
+kubectl get deployment
+kubectl get pods
+```
+
+**Description:**
+Verifies that the deployment and pods are successfully running.
+
+---
+
+## 📋 Step 9: View Pod Logs
+
+```bash
+kubectl logs <pod-name>
+```
+
+Example:
+
+```bash
+kubectl logs spring-boot-k8s-f4bc856c8-6q828
+```
+
+**Description:**
+Displays the console logs from the application running inside a pod.
+
+---
+
+## 🌐 Step 10: Create a Kubernetes Service
+
+**service.yaml**
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: springboot-k8s-service
+spec:
+  type: NodePort
+  selector:
+    app: springboot-k8s
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 32623
+```
+
+Apply the service:
+
+```bash
+kubectl apply -f service.yaml
+```
+
+**Description:**
+Creates a NodePort service to expose your Spring Boot app outside the cluster.
+
+---
+
+## 🔎 Step 11: Verify Service
+
+```bash
+kubectl get service
+```
+
+**Description:**
+Shows the service details including **Cluster IP**, **NodePort**, and **exposed ports**.
+
+Example output:
+
+```
+springboot-k8s-service   NodePort   10.97.122.187   <none>   8080:32623/TCP   1m
+```
+
+---
+
+## 🧭 Step 12: Get Minikube IP
+
+```bash
+minikube ip
+```
+
+**Description:**
+Returns the Minikube cluster’s IP address.
+Example output:
+
+```
+192.168.49.2
+```
+
+---
+
+## 🌍 Step 13: Access the Application
+
+Now open your browser and visit:
+
+```
+http://192.168.49.2:32623/message
+```
+
+✅ Output:
+
+```
+Congratulation you successfully deployed your application to kubernetes !!
+```
+
+---
+
+## 🧹 Step 14: Clean Up Resources (Optional)
+
+```bash
+kubectl delete -f service.yaml
+kubectl delete -f deployment.yaml
+minikube stop
+```
+
+**Description:**
+Deletes the Kubernetes objects and stops your Minikube cluster.
+
+---
+
+## 📘 Summary of Commands
+
+| Purpose                            | Command                                                        |
+| ---------------------------------- | -------------------------------------------------------------- |
+| Start cluster                      | `minikube start`                                               |
+| Check cluster status               | `minikube status`                                              |
+| Configure Docker env (Windows CMD) | `@FOR /f "tokens=*" %i IN ('minikube docker-env') DO @call %i` |
+| Check Docker info                  | `docker info`                                                  |
+| Build Docker image                 | `docker build -t springboot-k8s-demo:1.0 .`                    |
+| View images                        | `docker images`                                                |
+| Deploy to K8s                      | `kubectl apply -f deployment.yaml`                             |
+| Check pods                         | `kubectl get pods`                                             |
+| Check logs                         | `kubectl logs <pod-name>`                                      |
+| Create service                     | `kubectl apply -f service.yaml`                                |
+| Get services                       | `kubectl get svc`                                              |
+| Get Minikube IP                    | `minikube ip`                                                  |
+| Access App                         | `http://<minikube-ip>:<nodeport>`                              |
+
+---
+
+
